@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowUp, ArrowDown, Minus, Activity } from "lucide-react";
+
+export default function ComparePageWrapper() {
+  return (
+    <Suspense fallback={<main className="min-h-[calc(100vh-3.5rem)]"><div className="mx-auto max-w-4xl px-4 py-6"><p className="text-sm text-zinc-500">Chargement...</p></div></main>}>
+      <ComparePage />
+    </Suspense>
+  );
+}
 
 interface Workout {
   id: number;
@@ -47,7 +55,7 @@ function Diff({ v1, v2, fmt }: { v1: number | null; v2: number | null; fmt: (v: 
   );
 }
 
-export default function ComparePage() {
+function ComparePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id1 = searchParams.get("id1");
@@ -167,7 +175,7 @@ export default function ComparePage() {
     return `${Math.round(v * 10) / 10}${suffix}`;
   }
 
-  const fields: { label: string; key: keyof Workout; fmt: (v: number | null) => string }[] = [
+  const fields: { label: string; key: keyof Pick<Workout, "distance_meters" | "moving_time_seconds" | "average_heartrate" | "max_heartrate" | "average_speed" | "total_elevation_gain" | "calories" | "average_cadence" | "average_watts" | "max_watts">; fmt: (v: number | null) => string }[] = [
     { label: "Distance", key: "distance_meters", fmt: (v) => v ? `${(v / 1000).toFixed(2)} km` : "-" },
     { label: "Durée", key: "moving_time_seconds", fmt: (v) => v ? `${Math.floor(v / 60)} min` : "-" },
     { label: "FC moyenne", key: "average_heartrate", fmt: (v) => v ? `${Math.round(v)} bpm` : "-" },

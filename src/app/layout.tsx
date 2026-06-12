@@ -13,6 +13,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Forme — Coach sportif IA",
   description: "Analyse tes séances Strava et reçois des conseils coaching personnalisés par IA.",
+  manifest: "/manifest",
+  themeColor: "#09090b",
+  appleWebApp: { capable: true, title: "Forme", statusBarStyle: "black-translucent" },
 };
 
 export default function RootLayout({
@@ -33,6 +36,11 @@ export default function RootLayout({
           {children}
         </ThemeProvider>
         <Toaster position="top-center" richColors />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");`,
+          }}
+        />
       </body>
     </html>
   );

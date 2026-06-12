@@ -175,6 +175,44 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
             )}
           </div>
 
+          {workout.average_heartrate && workout.max_heartrate && (
+            <div className="mb-6 mt-6">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Zones FC</h3>
+              <div className="flex h-3 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                {[
+                  { label: "Z1", min: 0.5, max: 0.6, color: "bg-blue-400" },
+                  { label: "Z2", min: 0.6, max: 0.7, color: "bg-green-400" },
+                  { label: "Z3", min: 0.7, max: 0.8, color: "bg-yellow-400" },
+                  { label: "Z4", min: 0.8, max: 0.9, color: "bg-orange-400" },
+                  { label: "Z5", min: 0.9, max: 1.0, color: "bg-red-400" },
+                ].map((z) => {
+                  const zoneMin = workout.max_heartrate * z.min;
+                  const zoneMax = workout.max_heartrate * z.max;
+                  const avgHr = workout.average_heartrate!;
+                  const isActive = avgHr >= zoneMin && avgHr <= zoneMax;
+                  const isAbove = avgHr > zoneMax;
+                  return (
+                    <div
+                      key={z.label}
+                      className={`flex-1 ${isActive || isAbove ? z.color : ""} transition-colors`}
+                      title={`${z.label}: ${Math.round(zoneMin)}-${Math.round(zoneMax)} bpm`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] text-zinc-400">
+                <span>Z1 Récup</span>
+                <span>Z2 Endu</span>
+                <span>Z3 Tempo</span>
+                <span>Z4 Seuil</span>
+                <span>Z5 VO2max</span>
+              </div>
+              <p className="mt-1 text-[10px] text-zinc-500">
+                FC moyenne {Math.round(workout.average_heartrate)} bpm · FC max {Math.round(workout.max_heartrate)} bpm
+              </p>
+            </div>
+          )}
+
           {splits && splits.length > 0 && (
             <div className="mt-6">
               <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400">

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Dumbbell, Bot, Settings, BarChart3,
-  LogIn, UserPlus, Activity, Shield, Calendar,
+  LogIn, UserPlus, Activity, Shield, Calendar, Target,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: "Séances", href: "/workouts", icon: Activity },
   { label: "Stats", href: "/stats", icon: BarChart3 },
   { label: "Coach", href: "/coach", icon: Bot },
+  { label: "Objectifs", href: "/goals", icon: Target },
   { label: "Plans", href: "/plans", icon: Calendar },
   { label: "Réglages", href: "/settings", icon: Settings },
 ];

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/sync-button";
-import { Calendar, Target } from "lucide-react";
+import { Calendar, Target, Award } from "lucide-react";
+import { computeBadges } from "@/lib/utils/badges";
 
 interface PlanSession {
   day: string;
@@ -67,6 +68,30 @@ export default async function DashboardPage() {
       currentWeek = planData.weeks[weekIndex];
     }
   }
+
+  const { data: goals } = await supabase
+    .from("goals")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  const { data: allWorkouts } = await supabase
+    .from("workouts")
+    .select("distance_meters, total_elevation_gain, max_speed")
+    .eq("user_id", user.id);
+
+  const totalDistanceKm = (allWorkouts ?? []).reduce((s, w) => s + (w.distance_meters ?? 0), 0) / 1000;
+  const hasElevation = (allWorkouts ?? []).some((w) => (w.total_elevation_gain ?? 0) > 0);
+  const maxSpeed = (allWorkouts ?? []).reduce((s, w) => Math.max(s, w.max_speed ?? 0), 0);
+  const badges = computeBadges({
+    totalWorkouts: allWorkouts?.length ?? 0,
+    totalDistanceKm,
+    hasHeartrate: false,
+    hasElevation,
+    maxSpeed: maxSpeed || null,
+  });
 
   return (
     <main className="gradient-bg min-h-[calc(100vh-3.5rem)]">
@@ -180,6 +205,70 @@ export default async function DashboardPage() {
                   </div>
                 </div>
               )}
+
+              {goals && goals.length > 0 && (
+                <div className="glass-card p-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Objectifs</h2>
+                    <Link href="/goals" className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+                      Voir tout →
+                    </Link>
+                  </div>
+                  <div className="space-y-3">
+                    {goals.slice(0, 2).map((g) => {
+                      const pct = g.target_value && g.target_value > 0
+                        ? Math.min(100, Math.round((g.current_value / g.target_value) * 100))
+                        : 0;
+                      return (
+                        <div key={g.id}>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{g.title}</span>
+                            <span className="text-zinc-500">{pct}%</span>
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                            <div className="h-full rounded-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="glass-card p-6">
+                <div className="mb-3 flex items-center gap-2">
+                  <Award className="h-4 w-4 text-zinc-400" />
+                  <h2 className="text-sm font-semibold">Badges</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {badges.filter((b) => b.unlocked).length > 0 ? (
+                    badges.filter((b) => b.unlocked).map((b) => (
+                      <span key={b.id} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium dark:bg-zinc-800">
+                        <span>{b.icon}</span>
+                        {b.label}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-xs text-zinc-400">Continue tes entraînements pour débloquer des badges.</p>
+                  )}
+                </div>
+                {badges.filter((b) => !b.unlocked && b.progress).length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-[10px] text-zinc-400">En cours</p>
+                    {badges.filter((b) => !b.unlocked && b.progress).slice(0, 3).map((b) => (
+                      <div key={b.id}>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-zinc-500">{b.icon} {b.label}</span>
+                          <span className="text-zinc-400">{Math.round(b.progress ?? 0)}%</span>
+                        </div>
+                        <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                          <div className="h-full rounded-full bg-zinc-400" style={{ width: `${b.progress ?? 0}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

@@ -2,22 +2,22 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-interface WeekData {
+interface MonthData {
   name: string;
   km: number;
 }
 
-export function WeeklyChart({ data }: { data: WeekData[] }) {
+export function MonthlyChart({ data }: { data: MonthData[] }) {
   if (data.length === 0) {
     return <p className="py-4 text-center text-xs text-zinc-400">Aucune donnée</p>;
   }
 
   return (
-    <div className="h-40">
+    <div className="h-48">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+          <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={30} unit="km" />
           <Tooltip
             contentStyle={{
               fontSize: 12,

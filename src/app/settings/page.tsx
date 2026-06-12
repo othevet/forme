@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { CoachContextEditor } from "@/components/coach-context-editor";
+import { EmailReportToggle } from "@/components/email-report-toggle";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -68,6 +69,7 @@ export default async function SettingsPage() {
           </div>
 
           <CoachContextEditor />
+          <EmailReportToggle enabled={!!profile?.email_weekly_report} userEmail={user.email} />
         </div>
       </div>
     </main>

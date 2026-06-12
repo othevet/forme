@@ -25,14 +25,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { context } = await request.json();
-  if (!context || typeof context !== "string") {
-    return NextResponse.json({ error: "Context is required" }, { status: 400 });
+  const body = await request.json();
+  const updates: Record<string, unknown> = {};
+
+  if (typeof body.context === "string") {
+    updates.coaching_context = body.context;
+  }
+  if (typeof body.email_weekly_report === "boolean") {
+    updates.email_weekly_report = body.email_weekly_report;
+  }
+  if (typeof body.email === "string") {
+    updates.email = body.email;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
   const { error } = await supabaseAdmin
     .from("profiles")
-    .update({ coaching_context: context })
+    .update(updates)
     .eq("id", user.id);
 
   if (error) {

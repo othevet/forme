@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Clock, Route, Heart, Zap, Mountain, Gauge, Flame, Timer } from "lucide-react";
+import { ArrowLeft, Clock, Route, Heart, Zap, Mountain, Gauge, Flame, Timer, GitCompare } from "lucide-react";
 
 export default async function WorkoutDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -55,7 +55,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           Retour aux séances
         </Link>
 
-        <div className="glass-card p-6">
+          <div className="glass-card p-6">
           <div className="mb-6 flex items-start gap-4">
             <span className="text-3xl">{sportIcons[workout.sport_type] ?? "📊"}</span>
             <div className="flex-1">
@@ -65,6 +65,13 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
                 {workout.start_date && ` · ${new Date(workout.start_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
               </p>
             </div>
+            <Link
+              href={`/workouts/compare?id1=${workout.id}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+            >
+              <GitCompare className="h-3.5 w-3.5" />
+              Comparer
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

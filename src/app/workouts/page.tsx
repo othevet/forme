@@ -1,30 +1,109 @@
 import Link from "next/link";
+import { Plus, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function WorkoutsPage() {
+const COMMON_SPORTS = ["", "Run", "TrailRun", "Ride", "MountainBikeRide", "Swim", "Walk", "Hike", "Workout", "VirtualRide"];
+
+const sportIcons: Record<string, string> = {
+  Run: "🏃", TrailRun: "🏔️", Ride: "🚴", MountainBikeRide: "🚵",
+  Swim: "🏊", Walk: "🚶", Hike: "🥾", Workout: "🏋️",
+  WeightTraining: "🏋️", Yoga: "🧘", VirtualRide: "🚴",
+};
+
+export default async function WorkoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sport?: string; from?: string; to?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: workouts } = await supabase
-    .from("workouts")
-    .select("id, name, sport_type, distance_meters, moving_time_seconds, start_date, average_heartrate, average_speed, total_elevation_gain, calories")
-    .eq("user_id", user.id)
-    .order("start_date", { ascending: false })
-    .limit(50);
+  const params = await searchParams;
 
-  const sportIcons: Record<string, string> = {
-    Run: "🏃", TrailRun: "🏔️", Ride: "🚴", MountainBikeRide: "🚵",
-    Swim: "🏊", Walk: "🚶", Hike: "🥾", Workout: "🏋️",
-    WeightTraining: "🏋️", Yoga: "🧘", VirtualRide: "🚴",
-  };
+  let query = supabase
+    .from("workouts")
+    .select("id, name, sport_type, distance_meters, moving_time_seconds, start_date, average_heartrate, average_speed, total_elevation_gain, calories", { count: "exact" })
+    .eq("user_id", user.id);
+
+  if (params.sport) {
+    query = query.eq("sport_type", params.sport);
+  }
+  if (params.from) {
+    query = query.gte("start_date", params.from);
+  }
+  if (params.to) {
+    query = query.lte("start_date", params.to);
+  }
+
+  const { data: workouts, count } = await query
+    .order("start_date", { ascending: false })
+    .limit(200);
 
   return (
     <main className="gradient-bg min-h-[calc(100vh-3.5rem)]">
       <div className="mx-auto max-w-5xl px-4 py-6">
         <div className="glass-card p-6">
-          <h1 className="mb-1 text-lg font-semibold">Séances</h1>
-          <p className="mb-6 text-sm text-zinc-500">{workouts?.length ?? 0} séances importées</p>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold">Séances</h1>
+              <p className="text-sm text-zinc-500">{count ?? 0} séances</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/workouts/calendar"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Calendrier
+              </Link>
+              <Link
+                href="/workouts/new"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nouvelle
+              </Link>
+            </div>
+          </div>
+
+          <form className="mb-4 flex flex-wrap gap-2">
+            <select
+              name="sport"
+              defaultValue={params.sport ?? ""}
+              onChange={(e) => e.target.form?.requestSubmit()}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="">Tous les sports</option>
+              {COMMON_SPORTS.filter(Boolean).map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <input
+              type="date"
+              name="from"
+              defaultValue={params.from ?? ""}
+              onChange={(e) => e.target.form?.requestSubmit()}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              title="Du"
+            />
+            <input
+              type="date"
+              name="to"
+              defaultValue={params.to ?? ""}
+              onChange={(e) => e.target.form?.requestSubmit()}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              title="Au"
+            />
+            {(params.sport || params.from || params.to) && (
+              <Link
+                href="/workouts"
+                className="rounded-lg px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              >
+                Réinitialiser
+              </Link>
+            )}
+          </form>
 
           {workouts && workouts.length > 0 ? (
             <div className="space-y-2">
@@ -55,7 +134,7 @@ export default async function WorkoutsPage() {
             </div>
           ) : (
             <p className="py-8 text-center text-sm text-zinc-400">
-              Aucune séance pour le moment. Importe tes données depuis Strava dans les réglages.
+              Aucune séance pour le moment.
             </p>
           )}
         </div>

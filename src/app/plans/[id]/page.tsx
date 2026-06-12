@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Target, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { PrintButton } from "@/components/print-button";
 
 interface WeekSession {
   day: string;
@@ -58,7 +59,10 @@ export default async function PlanDetailPage({
         </Link>
 
         <div className="glass-card mb-6 p-6">
-          <h1 className="text-xl font-semibold">{content?.title ?? plan.title}</h1>
+          <div className="flex items-start justify-between">
+            <h1 className="text-xl font-semibold">{content?.title ?? plan.title}</h1>
+            <PrintButton />
+          </div>
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-zinc-500">
             <span className="flex items-center gap-1.5">
               <Target className="h-4 w-4" />

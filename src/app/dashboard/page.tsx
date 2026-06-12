@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/sync-button";
-import { Calendar, Target, Award } from "lucide-react";
+import { Calendar, Target, Award, Dumbbell } from "lucide-react";
 import { computeBadges } from "@/lib/utils/badges";
+
+const FRENCH_DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
 interface PlanSession {
   day: string;
@@ -58,6 +60,7 @@ export default async function DashboardPage() {
     .maybeSingle();
 
   let currentWeek: PlanWeek | null = null;
+  let todaySession: PlanSession | null = null;
   if (latestPlan?.plan_json) {
     const planData = latestPlan.plan_json as PlanJSON;
     const weeksSinceCreation = Math.floor(
@@ -66,6 +69,8 @@ export default async function DashboardPage() {
     const weekIndex = Math.min(weeksSinceCreation, (planData.weeks?.length ?? 1) - 1);
     if (weekIndex >= 0 && planData.weeks?.[weekIndex]) {
       currentWeek = planData.weeks[weekIndex];
+      const todayName = FRENCH_DAYS[new Date().getDay()];
+      todaySession = currentWeek.sessions?.find((s) => s.day === todayName) ?? null;
     }
   }
 
@@ -105,6 +110,26 @@ export default async function DashboardPage() {
               {profile?.login_message ?? "Voici ton résumé des dernières séances."}
             </p>
           </div>
+
+          {todaySession && (
+            <div className="glass-card border-l-4 border-l-zinc-900 p-5 dark:border-l-zinc-100">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <Dumbbell className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Séance du jour</p>
+                    <h2 className="font-semibold">{todaySession.type}</h2>
+                  </div>
+                </div>
+                <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium dark:bg-zinc-800">
+                  {todaySession.duration}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                {todaySession.description}
+              </p>
+            </div>
+          )}
 
           {!strava && (
             <div className="glass-card p-6 text-center">

@@ -35,7 +35,7 @@ export default async function DashboardPage() {
               Bon retour, {profile?.display_name ?? "Sportif"} 👋
             </h1>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Voici ton résumé des dernières séances.
+              {profile?.login_message ?? "Voici ton résumé des dernières séances."}
             </p>
           </div>
 

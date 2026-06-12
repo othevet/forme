@@ -1,6 +1,28 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/sync-button";
+import { Calendar, Target } from "lucide-react";
+
+interface PlanSession {
+  day: string;
+  type: string;
+  description: string;
+  duration: string;
+}
+
+interface PlanWeek {
+  week: number;
+  theme: string;
+  description: string;
+  sessions: PlanSession[];
+}
+
+interface PlanJSON {
+  title: string;
+  goal: string;
+  overview: string;
+  weeks: PlanWeek[];
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -25,6 +47,26 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("start_date", { ascending: false })
     .limit(5);
+
+  const { data: latestPlan } = await supabase
+    .from("training_plans")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let currentWeek: PlanWeek | null = null;
+  if (latestPlan?.plan_json) {
+    const planData = latestPlan.plan_json as PlanJSON;
+    const weeksSinceCreation = Math.floor(
+      (Date.now() - new Date(latestPlan.created_at).getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+    const weekIndex = Math.min(weeksSinceCreation, (planData.weeks?.length ?? 1) - 1);
+    if (weekIndex >= 0 && planData.weeks?.[weekIndex]) {
+      currentWeek = planData.weeks[weekIndex];
+    }
+  }
 
   return (
     <main className="gradient-bg min-h-[calc(100vh-3.5rem)]">
@@ -102,6 +144,42 @@ export default async function DashboardPage() {
                   Parler au coach →
                 </a>
               </div>
+
+              {currentWeek && (
+                <div className="glass-card p-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Plan d&apos;entraînement</h2>
+                    <Link
+                      href={`/plans/${latestPlan!.id}`}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                    >
+                      Voir tout →
+                    </Link>
+                  </div>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Target className="h-3.5 w-3.5 text-zinc-400" />
+                    <p className="text-xs text-zinc-500">{currentWeek.theme}</p>
+                    <span className="ml-auto text-[10px] text-zinc-400">Semaine {currentWeek.week}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {currentWeek.sessions?.slice(0, 7).map((s, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-xs dark:bg-zinc-900"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-12 font-medium text-zinc-500">{s.day}</span>
+                          <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium dark:bg-zinc-800">
+                            {s.type}
+                          </span>
+                          <span className="text-zinc-600 dark:text-zinc-400">{s.description}</span>
+                        </div>
+                        <span className="text-zinc-400">{s.duration}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

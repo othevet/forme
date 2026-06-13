@@ -53,12 +53,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const { data: history } = await supabase
-    .from("coaching_messages")
-    .select("role, content")
-    .eq("session_id", currentSessionId)
-    .order("created_at", { ascending: true });
-
   const { data: profile } = await supabase
     .from("profiles")
     .select("coaching_context")
@@ -71,27 +65,29 @@ export async function POST(request: NextRequest) {
 
   const systemContent = `${COACH_SYSTEM_PROMPT}\n\n${workoutContext}${contextSection}`;
 
-  const historyMessages = (history ?? []).map((m) => ({
-    role: m.role === "assistant" ? "model" as const : "user" as const,
-    parts: [{ text: m.content }],
-  }));
+  const { data: history } = await supabase
+    .from("coaching_messages")
+    .select("role, content")
+    .eq("session_id", currentSessionId)
+    .order("created_at", { ascending: true });
 
   const model = getGenAI().getGenerativeModel({
     model: CHAT_MODEL,
     systemInstruction: systemContent,
   });
 
-  const chat = model.startChat({
-    history: historyMessages,
-  });
+  const contents = (history ?? []).map((m) => ({
+    role: m.role === "assistant" ? "model" as const : "user" as const,
+    parts: [{ text: m.content }],
+  }));
 
-  const stream = await chat.sendMessageStream(message);
+  const result = await model.generateContentStream({ contents });
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
       let fullResponse = "";
-      for await (const chunk of stream.stream) {
+      for await (const chunk of result) {
         const text = chunk.text();
         if (text) {
           fullResponse += text;

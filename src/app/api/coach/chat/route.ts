@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       let fullResponse = "";
-      for await (const chunk of result) {
+      for await (const chunk of result.stream) {
         const text = chunk.text();
         if (text) {
           fullResponse += text;

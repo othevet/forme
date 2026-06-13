@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { mistral, COACH_SYSTEM_PROMPT } from "@/lib/ai/client";
+import { getGenAI, CHAT_MODEL, COACH_SYSTEM_PROMPT } from "@/lib/ai/client";
 
 export async function POST(request: NextRequest) {
   const { message, sessionId } = await request.json();
@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  // Get recent workouts for context
   const { data: recentWorkouts } = await supabase
     .from("workouts")
     .select("name, sport_type, distance_meters, moving_time_seconds, start_date, average_heartrate, average_speed, total_elevation_gain, calories")
@@ -36,7 +35,6 @@ export async function POST(request: NextRequest) {
       ).join("\n")}`
     : "Aucune séance récente.";
 
-  // Get or create coaching session
   let currentSessionId = sessionId;
   if (!currentSessionId) {
     const { data: newSession } = await supabase
@@ -47,7 +45,6 @@ export async function POST(request: NextRequest) {
     currentSessionId = newSession?.id;
   }
 
-  // Save user message
   if (currentSessionId) {
     await supabase.from("coaching_messages").insert({
       session_id: currentSessionId,
@@ -56,16 +53,12 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Get conversation history
   const { data: history } = await supabase
     .from("coaching_messages")
     .select("role, content")
     .eq("session_id", currentSessionId)
     .order("created_at", { ascending: true });
 
-  const formattedHistory = history?.map((m) => ({ role: m.role, content: m.content })) ?? [];
-
-  // Get coaching context from profile
   const { data: profile } = await supabase
     .from("profiles")
     .select("coaching_context")
@@ -76,32 +69,37 @@ export async function POST(request: NextRequest) {
     ? `\n\nContexte historique des conversations avec l'utilisateur (à prendre en compte pour la continuité du coaching):\n${profile.coaching_context}`
     : "";
 
-  // Build messages for Mistral
-  const messages = [
-    { role: "system", content: `${COACH_SYSTEM_PROMPT}\n\n${workoutContext}${contextSection}` },
-    ...formattedHistory,
-  ];
+  const systemContent = `${COACH_SYSTEM_PROMPT}\n\n${workoutContext}${contextSection}`;
 
-  // Stream response
-  const stream = await mistral.chat.stream({
-    model: "mistral-small-latest",
-    messages: messages as any,
+  const historyMessages = (history ?? []).map((m) => ({
+    role: m.role === "assistant" ? "model" as const : "user" as const,
+    parts: [{ text: m.content }],
+  }));
+
+  const model = getGenAI().getGenerativeModel({
+    model: CHAT_MODEL,
+    systemInstruction: systemContent,
   });
+
+  const chat = model.startChat({
+    history: historyMessages,
+  });
+
+  const stream = await chat.sendMessageStream(message);
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
       let fullResponse = "";
-      for await (const chunk of stream) {
-        const content = chunk.data?.choices?.[0]?.delta?.content;
-        if (typeof content === "string") {
-          fullResponse += content;
-          controller.enqueue(encoder.encode(content));
+      for await (const chunk of stream.stream) {
+        const text = chunk.text();
+        if (text) {
+          fullResponse += text;
+          controller.enqueue(encoder.encode(text));
         }
       }
       controller.close();
 
-      // Save assistant message
       if (currentSessionId && fullResponse) {
         await supabase.from("coaching_messages").insert({
           session_id: currentSessionId,

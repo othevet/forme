@@ -1,12 +1,21 @@
-import { Mistral } from "@mistralai/mistralai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.MISTRAL_API_KEY;
+let _genAI: GoogleGenerativeAI | null = null;
 
-if (!apiKey) {
-  throw new Error("MISTRAL_API_KEY not configured");
+function getGenAI(): GoogleGenerativeAI {
+  if (!_genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY not configured");
+    }
+    _genAI = new GoogleGenerativeAI(apiKey);
+  }
+  return _genAI;
 }
 
-export const mistral = new Mistral({ apiKey });
+export { getGenAI };
+
+export const CHAT_MODEL = "gemini-2.0-flash-lite";
 
 export const COACH_SYSTEM_PROMPT = `Tu es Forme Coach, un coach sportif IA expert en analyse d'entraînement.
 

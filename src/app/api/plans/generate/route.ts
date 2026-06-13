@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { mistral } from "@/lib/ai/client";
+import { getGenAI, CHAT_MODEL } from "@/lib/ai/client";
 
 export async function POST(request: NextRequest) {
   const cookieStore = request.cookies;
@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
     ? recentWorkouts.map((w) => `- ${w.sport_type} ${(w.distance_meters / 1000).toFixed(1)}km, ${Math.floor(w.moving_time_seconds / 60)}min${w.average_heartrate ? `, ${Math.round(w.average_heartrate)}bpm` : ""}${w.total_elevation_gain ? `, ${Math.round(w.total_elevation_gain)}m D+` : ""} le ${new Date(w.start_date).toLocaleDateString("fr-FR")}`).join("\n")
     : "Aucune séance récente.";
 
-  const systemPrompt = `Tu es Forme Coach, un coach sportif IA expert en création de plans d'entraînement.
+  const prompt = `Tu es Forme Coach, un coach sportif IA expert en création de plans d'entraînement.
+
 Génère un plan d'entraînement personnalisé en français.
 
 Format de réponse : un JSON valide uniquement, sans texte autour, avec cette structure exacte :
@@ -64,9 +65,9 @@ Format de réponse : un JSON valide uniquement, sans texte autour, avec cette st
   ]
 }
 
-Semaines : ${weeks}. Sport : ${sportType}. Objectif : ${goal}.`;
+Semaines : ${weeks}. Sport : ${sportType}. Objectif : ${goal}.
 
-  const userContent = `Contexte utilisateur :
+Contexte utilisateur :
 Nom : ${profile?.display_name ?? "Sportif"}
 Contexte coach : ${profile?.coaching_context ?? "Aucun"}
 Dernières séances :
@@ -75,17 +76,17 @@ ${workoutSummary}
 Génère un plan d'entraînement de ${weeks} semaines pour ${sportType} avec l'objectif : ${goal}.`;
 
   try {
-    const response = await mistral.chat.complete({
-      model: "mistral-small-latest",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      responseFormat: { type: "json_object" },
+    const model = getGenAI().getGenerativeModel({
+      model: CHAT_MODEL,
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
     });
 
-    const content = response.choices?.[0]?.message?.content;
-    if (!content || typeof content !== "string") {
+    const result = await model.generateContent(prompt);
+    const content = result.response.text();
+
+    if (!content) {
       return NextResponse.json({ error: "No response from AI" }, { status: 500 });
     }
 
